@@ -42,7 +42,7 @@ def draw_prediction(img, class_id, confidence, x, y, x_plus_w, y_plus_h):
 
     cv2.putText(img, label, (x-10,y-10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
 
-    
+
 image = cv2.imread(args.image)
 
 Width = image.shape[1]
@@ -89,6 +89,7 @@ for out in outs:
 
 
 indices = cv2.dnn.NMSBoxes(boxes, confidences, conf_threshold, nms_threshold)
+ppl_cntr = 0;
 
 for i in indices:
     try:
@@ -101,7 +102,13 @@ for i in indices:
     y = box[1]
     w = box[2]
     h = box[3]
+    if class_ids[i] == 0:
+    	ppl_cntr += 1
+    
     draw_prediction(image, class_ids[i], confidences[i], round(x), round(y), round(x+w), round(y+h))
+
+cv2.putText(image, str(ppl_cntr), (20, 15), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 2)
+
 
 cv2.imshow("object detection", image)
 cv2.waitKey()
