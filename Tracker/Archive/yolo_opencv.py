@@ -8,28 +8,6 @@
 import cv2
 import argparse
 import numpy as np
-import random as r
-
-arr_ppl = []
-
-def idchecker(id, arr_ppl):
-    for x in arr_ppl:
-        if x.number != id:
-            return True
-        else:
-            return False
-
-class personId:
-    def __init__(self,number):
-        id = r.randint(1000,9999)+ppl_cntr
-        condtionId = idchecker(id, arr_ppl)
-        if (condtionId):
-            self.number = id
-        else:        
-            id = r.randint(1000,9999)+ppl_cntr
-            self.number = id
-
-
 
 ap = argparse.ArgumentParser()
 ap.add_argument('-i', '--image', required=True,
@@ -54,14 +32,11 @@ def get_output_layers(net):
     return output_layers
 
 
-def draw_prediction(img, class_id, confidence, x, y, x_plus_w, y_plus_h, lbl_id):
+def draw_prediction(img, class_id, confidence, x, y, x_plus_w, y_plus_h):
 
-    if (class_id == 0):
-        label = str(lbl_id)
-        color = (0,252,0)
-    else:
-        label = str(classes[class_id])
-        color = COLORS[class_id]
+    label = str(classes[class_id])
+
+    color = COLORS[class_id]
 
     cv2.rectangle(img, (x,y), (x_plus_w,y_plus_h), color, 2)
 
@@ -113,7 +88,6 @@ for out in outs:
             boxes.append([x, y, w, h])
 
 
-
 indices = cv2.dnn.NMSBoxes(boxes, confidences, conf_threshold, nms_threshold)
 ppl_cntr = 0;
 
@@ -129,21 +103,15 @@ for i in indices:
     w = box[2]
     h = box[3]
     if class_ids[i] == 0:
-        ppl_cntr += 1
-        person_found = personId(ppl_cntr)
-        arr_ppl.append(person_found)
+    	ppl_cntr += 1
+    
+    draw_prediction(image, class_ids[i], confidences[i], round(x), round(y), round(x+w), round(y+h))
 
-        
-        draw_prediction(image, class_ids[i], confidences[i], round(x), round(y), round(x+w), round(y+h), person_found.number)
-    else:
-        draw_prediction(image, class_ids[i], confidences[i], round(x), round(y), round(x+w), round(y+h), 0)
-
-cv2.putText(image, str(ppl_cntr), (20, 10), cv2.FONT_HERSHEY_SIMPLEX, 0.3, (255, 0, 0), 2)
+cv2.putText(image, str(ppl_cntr), (20, 15), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 2)
 
 
 cv2.imshow("object detection", image)
 cv2.waitKey()
 
-print(len(arr_ppl))
 cv2.imwrite("object-detection.jpg", image)
 cv2.destroyAllWindows()
