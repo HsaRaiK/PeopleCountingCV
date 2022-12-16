@@ -9,6 +9,7 @@ import cv2
 import argparse
 import numpy as np
 import random as r
+from pathlib import Path
 
 arr_ppl = []
 
@@ -21,14 +22,14 @@ def idchecker(id, arr_ppl):
 
 class personId:
     def __init__(self,number):
-        id = r.randint(1000,9999)+ppl_cntr
-        condtionId = idchecker(id, arr_ppl)
-        if (condtionId):
-            self.number = id
-        else:        
-            id = r.randint(1000,9999)+ppl_cntr
-            self.number = id
-
+        #id = r.randint(1000,9999)+ppl_cntr
+        #condtionId = idchecker(id, arr_ppl)
+        #if (condtionId):
+        #    self.number = id
+        #else:        
+        #    id = r.randint(1000,9999)+ppl_cntr
+        #    self.number = id
+        self.number = number
 
 
 ap = argparse.ArgumentParser()
