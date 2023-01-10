@@ -155,7 +155,11 @@ print(VIDEO_PATH)
 #VIDEO_PATH = askopenfilename()
 tracker = CentroidTracker(maxDisappeared=80, maxDistance=90)
 cap = cv2.VideoCapture(VIDEO_PATH)
-outputFile = VIDEO_PATH[:-4]+'_out.avi'
+if VIDEO_PATH != 0:
+    outputFile = VIDEO_PATH[:-4]+'_out.avi'
+elif VIDEO_PATH == 0:
+    outputFile = 'CameraFootage'+'_out.avi'
+
 print("Generated empty output.")
 vid_writer = cv2.VideoWriter(outputFile, cv2.VideoWriter_fourcc('M','J','P','G'), 30, (round(cap.get(cv2.CAP_PROP_FRAME_WIDTH)),round(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))))
 
