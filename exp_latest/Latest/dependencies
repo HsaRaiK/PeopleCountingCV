@@ -1,0 +1,103 @@
+from __future__ import print_function
+import sys
+import cv2
+import numpy as np
+from random import randint
+from tkinter import Tk     # pip install tk
+from tkinter.filedialog import askopenfilename
+from collections import defaultdict
+import argparse
+from CentroidTracker import CentroidTracker
+import guiv1k1 as guiv1 
+
+
+
+def postprocess(frame, outs):
+    
+    # Perform non maximum suppression to eliminate redundant overlapping boxes with lower confidences.
+    boxes, confidences, classIds = detect(frame, outs)
+    indices = cv2.dnn.NMSBoxes(boxes, confidences, confThreshold, nmsThreshold)
+
+    # Filter the boxes that fall inside the ROI
+    used_boxes = []
+    for i in indices:
+        box = boxes[i]
+        left, top, width, height = box
+        x1, y1, x2, y2 = left, top, left+width, top+height
+        if roi[0] < x1 < roi[2] and roi[1] < y1 < roi[3] and roi[0] < x2 < roi[2] and roi[1] < y2 < roi[3]:
+            used_boxes.append(box)
+    
+    ppl_cntr = len(used_boxes)
+    for bbox in used_boxes:
+        left, top, width, height = bbox
+        # drawPred(classIds[i], confidences[i], left, top, left + width, top + height)
+        cv2.rectangle(frame, (left, top), (left+width, top+height), (255, 178, 50), 2)
+
+    cv2.putText(frame, "People counter: " + str(ppl_cntr), (0, 15), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255,  255), 2)
+    return used_boxes
+
+
+"""def postprocess(frame, outs):
+    
+    # Perform non maximum suppression to eliminate redundant overlapping boxes with lower confidences.
+    boxes, confidences, classIds = detect(frame, outs)
+    indices = cv2.dnn.NMSBoxes(boxes, confidences, confThreshold, nmsThreshold)
+
+    # Filter the boxes that fall inside the ROI
+    used_boxes = []
+    for i in indices:
+        box = boxes[i]
+        left, top, width, height = box
+        x1, y1, x2, y2 = left, top, left+width, top+height
+        if roi[0] < x1 < rsoi[2] and roi[1] < y1 < roi[3] and roi[0] < x2 < roi[2] and roi[1] < y2 < roi[3]:
+            used_boxes.append(box)
+    
+    ppl_cntr = len(used_boxes)
+    for bbox in used_boxes:
+        left, top, width, height = bbox
+        # drawPred(classIds[i], confidences[i], left, top, left + width, top + height)
+        cv2.rectangle(frame, (left, top), (left+width, top+height), (255, 178, 50), 2)
+
+    cv2.putText(frame, "People counter: " + str(ppl_cntr), (0, 15), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255,  255), 2)
+    return used_boxes """
+
+
+def postprocess(frame, outs):
+    # Perform non maximum suppression to eliminate redundant overlapping boxes with
+    # lower confidences.
+
+    boxes, confidences, classIds = detect(frame, outs)
+    indices = cv2.dnn.NMSBoxes(boxes, confidences, confThreshold, nmsThreshold)
+    ppl_cntr = 0
+    used_boxes = []
+    for i in indices:
+        try:
+            box = boxes[i]
+        except:
+            i = i[0]
+            box = boxes[i]
+        left = box[0]
+        top = box[1]
+        width = box[2]
+        height = box[3]
+        ppl_cntr += 1
+        # if classIds[i] == 0:
+        #    ppl_cntr += 1
+
+        #drawPred(classIds[i], confidences[i], left, top, left + width, top + height)
+
+        bbox = (left, top, left + width, top + height)
+
+        used_boxes.append(bbox)
+
+        # Calculate the average RGB value for each box
+        box_img = frame[top:top+height//2, left:left+width//2]
+        avg_rgb = np.mean(box_img, axis=(0,1))
+
+        # Print the average RGB value on the frame
+        cv2.putText(frame, f"Box {len(used_boxes)} RGB: {avg_rgb}", (left, top-10),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
+
+    cv2.putText(frame, "People counter: " + str(ppl_cntr), (0, 15),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255,  255), 2)
+    return used_boxes
