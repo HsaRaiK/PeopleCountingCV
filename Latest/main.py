@@ -10,7 +10,7 @@ import argparse
 from CentroidTracker import CentroidTracker
 import guiv1k1 as guiv1 
 
-confThreshold = 0.6  #Confidence threshold
+confThreshold = 0.6  #Confidence thresholddnn
 nmsThreshold = 0.4   #Non-maximum suppression threshold
 inpWidth = 416       #Width of network's input image
 inpHeight = 416      #Height of network's input image
@@ -24,7 +24,27 @@ enter_count = 0
 exit_count = 0
 counted_object_id = []
 outed_object_id = []
+class PersonReID:
+    def __init__(self):
+        self.histograms = {}
 
+    def compute_histogram(self, img):
+        hist = cv2.calcHist([img], [0, 1, 2], None, [8, 8, 8], [0, 256, 0, 256, 0, 256])
+        return cv2.normalize(hist, hist).flatten()
+
+    def compare_histograms(self, hist1, hist2):
+        return cv2.compareHist(hist1, hist2, cv2.HISTCMP_BHATTACHARYYA)
+
+    def update(self, person_id, img):
+        hist = self.compute_histogram(img)
+        self.histograms[person_id] = hist
+
+    def find_matching_id(self, img, threshold=0.5):
+        hist = self.compute_histogram(img)
+        for person_id, stored_hist in self.histograms.items():
+            if self.compare_histograms(hist, stored_hist) < threshold:
+                return person_id
+        return None
 
 def getOutputsNames(net):
     # Get the names of all the layers in the network
@@ -85,10 +105,6 @@ def postprocess(frame, outs):
         width = box[2]
         height = box[3]
         ppl_cntr += 1 
-        #if classIds[i] == 0:
-    	#    ppl_cntr += 1
-        
-        #drawPred(classIds[i], confidences[i], left, top, left + width, top + height)
         
         bbox = (left, top, left + width, top + height)
 
@@ -97,12 +113,6 @@ def postprocess(frame, outs):
     cv2.putText(frame, "People counter: " + str(ppl_cntr), (0, 15), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255,  255), 2)
     return used_boxes
         
-# Draw the predicted bounding box
-def drawPred(classId, conf, left, top, right, bottom):
-    # Draw a bounding box.
-    print("Drawing boxes.")
-    cv2.rectangle(frame, (left, top), (right, bottom), (255, 178, 50), 2)
-    print("Displaying labels")
 
 def tracklines(used_boxes):
     global object_id_list
@@ -217,7 +227,7 @@ def selectEntrance(frame):
 #    classes = f.read().rstrip('\n').split('\n')
 classes = 'person'
 
-net = cv2.dnn.readNetFromDarknet("yolov3.cfg", "yolov3.weights")
+net = cv2.dnn.readNetFromDarknet("yolov4.cfg", "yolov4.weights")
 net.setPreferableBackend(cv2.dnn.DNN_BACKEND_OPENCV)
 net.setPreferableTarget(cv2.dnn.DNN_TARGET_CPU)
 
