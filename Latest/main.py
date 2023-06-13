@@ -19,7 +19,8 @@ selected = 0
 centroid_dict = defaultdict(list)
 object_id_list = []
 door = None
-
+hist = {}
+result_hist = {}
 enter_count = 0
 exit_count = 0
 counted_object_id = []
@@ -122,6 +123,8 @@ def tracklines(used_boxes):
     global exit_count
     global counted_object_id
     global outed_object_id
+    global hist
+    global result_hist
     objects = tracker.update(used_boxes)
     for (objectId, newbox) in objects.items():
         x1, y1, x2, y2 = newbox
@@ -181,8 +184,15 @@ def tracklines(used_boxes):
                     else:
                         continue
             
-            
-            
+                    bbox = centroid_dict[objectId]
+                    cropped = frame[eny1:eny1 + eny2, enx1:enx1+enx2]
+                    person_id = reid.find_matching_id(cropped)
+                    
+                    if person_id is None:
+                        person_id =  f"Person {len(reid.histograms) + 1}"
+                        reid.update(person_id, cropped)
+                        
+                        
                     
         cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 0, 255), 2)
         text = "ID: {}".format(objectId)
@@ -245,7 +255,7 @@ elif VIDEO_PATH == 0:
     outputFile = 'CameraFootage'+'_out.avi'
 print("Generated empty output.")
 vid_writer = cv2.VideoWriter(outputFile, cv2.VideoWriter_fourcc('M','J','P','G'), 30, (round(cap.get(cv2.CAP_PROP_FRAME_WIDTH)),round(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))))
-
+reid = PersonReID()
 # Read first frame
 success, frame = cap.read()
 # quit if unable to read the video file
