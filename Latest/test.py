@@ -124,14 +124,15 @@ outed_object_id, tracker, reid):
 
 		centroid_dict[objectId].append((cX, cY))
 		
+		
 		cropped_img = frame[y1:y2, x1:x2]
 		cv2.imshow("a", cropped_img)
-		person_id = reid.find_matching_id(cropped_img)
-		
-		
+		person_id = reid.find_matching_id(cropped_img)	
 		if person_id is None:
-				person_id = f"Person {objectId + 1}"
-				reid.update(person_id, frame)
+			person_id = f" {objectId + 1}"
+			reid.update(person_id, frame)
+		
+		
 		
 		if objectId not in object_id_list:
 			object_id_list.append(objectId)
@@ -177,10 +178,12 @@ outed_object_id, tracker, reid):
 		cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 0, 255), 2)
 	
 	#for person_id, stored_hist in reid.histograms.items():
+	
+	
+	
+
 	text = "ID: {}".format(person_id)
 	cv2.putText(frame, text, (x1, y1-5), cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, (0, 0, 255), 1)
-		
-
 	cv2.putText(frame, "Enters: " + str(enter_count), (0, 150), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
 	cv2.putText(frame, "Exits: " + str(exit_count), (0, 180), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
 	cv2.putText(frame, "# inside " + str(enter_count - exit_count), (0, 210), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
