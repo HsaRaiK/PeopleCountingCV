@@ -32,13 +32,16 @@ def compare_histograms(hist1, hist2):
 	return cv2.compareHist(hist1, hist2, cv2.HISTCMP_BHATTACHARYYA)     
 
 def update(histograms, person_id, img, boxes):
-	hist = compute_histogram(img, boxes, histograms)
+	histograms = compute_histogram(img, boxes, histograms)
 	histograms[person_id] = hist
+	return histograms
 	
-def find_matching_id(histograms, img, boxes, threshold=0.5):
+def find_matching_id(img, boxes, histograms, threshold=0.5):
 	new_hist = compute_histogram(img, boxes, histograms)
+	print(new_hist)
 	for person_id, stored_hist in histograms.items():
-		if compare_histograms(hist, stored_hist) < threshold:
+		print(stored_hist)
+		if compare_histograms(new_hist, stored_hist) < threshold:
 			return person_id
 	return None	
 
@@ -128,13 +131,14 @@ outed_object_id, tracker, histograms):
 
 		centroid_dict[objectId].append((cX, cY))
 		
-		cropped_img = frame[y1:y1+y2, x1:x1+x2]
-		person_id = find_matching_id(histograms, cropped_img, used_boxes)
+
+		
+		person_id = find_matching_id(frame, used_boxes, histograms)
 		
 		
 		if person_id is None:
-				person_id = f"Person {len(reid.histograms) + 1}"
-				update(histograms, person_id, cropped_img, used_boxes)
+				person_id = f"Person {len(histograms) + 1}"
+				hist, histograms = update(histograms, person_id, frame, used_boxes)
 		
 		if objectId not in object_id_list:
 			object_id_list.append(objectId)
