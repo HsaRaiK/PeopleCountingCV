@@ -10,42 +10,36 @@ import argparse
 from CentroidTracker import CentroidTracker
 import guiv1k1 as guiv1 
 from skimage.feature import hog
-	
+
+
+class PersonReID:
+    def __init__(self):
+        self.histograms = {}
+
+    def compute_histogram(self, img):
+        hist = cv2.calcHist([img], [0, 1, 2], None, [8, 8, 8], [0,
+256, 0, 256, 0, 256])
+        return cv2.normalize(hist, hist).flatten()
+
+    def compare_histograms(self, hist1, hist2):
+        return cv2.compareHist(hist1, hist2, cv2.HISTCMP_BHATTACHARYYA)
+
+    def update(self, person_id, img):
+        hist = self.compute_histogram(img)
+        self.histograms[person_id] = hist
+
+    def find_matching_id(self, img, threshold=0.5):
+        hist = self.compute_histogram(img)
+        for person_id, stored_hist in self.histograms.items():
+            if self.compare_histograms(hist, stored_hist) < threshold:
+                return person_id
+        return None
+
 def getOutputsNames(net):
     # Get the names of all the layers in the network
     layersNames = net.getLayerNames()
     # Get the names of the output layers, i.e. the layers with unconnected outputs
     return [layersNames[i - 1] for i in net.getUnconnectedOutLayers()]
-
-def compute_histogram(frame, boxes, histograms):
-       for i, box in enumerate(boxes):
-           left, top, width, height = box
-           roi = frame[top:top+height, left:left+width]
-           hsv_roi = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
-           mask = cv2.inRange(hsv_roi, np.array((0., 60., 32.)), np.array((180., 255., 255.)))
-           hist = cv2.calcHist([hsv_roi], [0, 1], mask, [180, 256], [0, 180, 0, 256])
-           cv2.normalize(hist, hist, 0, 255, cv2.NORM_MINMAX)
-           histograms[i] = hist
-       return histograms
-       
-def compare_histograms(hist1, hist2):
-	return cv2.compareHist(hist1, hist2, cv2.HISTCMP_BHATTACHARYYA)     
-
-def update(histograms, person_id, img, boxes):
-	histograms = compute_histogram(img, boxes, histograms)
-	histograms[person_id] = hist
-	return histograms
-	
-def find_matching_id(img, boxes, histograms, threshold=0.5):
-	new_hist = compute_histogram(img, boxes, histograms)
-	print(new_hist)
-	for person_id, stored_hist in histograms.items():
-		print(stored_hist)
-		if compare_histograms(new_hist, stored_hist) < threshold:
-			return person_id
-	return None	
-
-
 
 def detect(frame, outs, confThreshold):
 	frameHeight = frame.shape[0]
@@ -112,10 +106,9 @@ def selectEntrance(frame):
 	return door
 
 def tracklines(frame, used_boxes, object_id_list, centroid_dict, enter_count, door, exit_count, counted_object_id, 
-outed_object_id, tracker, histograms):
+outed_object_id, tracker, reid):
 	objects = tracker.update(used_boxes)
 	
-	histograms = {}
 	new_hist = {}
 	
 	for (objectId, newbox) in objects.items():
@@ -131,14 +124,14 @@ outed_object_id, tracker, histograms):
 
 		centroid_dict[objectId].append((cX, cY))
 		
-
-		
-		person_id = find_matching_id(frame, used_boxes, histograms)
+		cropped_img = frame[y1:y2, x1:x2]
+		cv2.imshow("a", cropped_img)
+		person_id = reid.find_matching_id(cropped_img)
 		
 		
 		if person_id is None:
-				person_id = f"Person {len(histograms) + 1}"
-				hist, histograms = update(histograms, person_id, frame, used_boxes)
+				person_id = f"Person {objectId + 1}"
+				reid.update(person_id, frame)
 		
 		if objectId not in object_id_list:
 			object_id_list.append(objectId)
@@ -183,16 +176,16 @@ outed_object_id, tracker, histograms):
 		
 		cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 0, 255), 2)
 	
-	for person_id, stored_hist in histograms.items():
-		text = "ID: {}".format(person_id)
-		cv2.putText(frame, text, (x1, y1-5), cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, (0, 0, 255), 1)
+	#for person_id, stored_hist in reid.histograms.items():
+	text = "ID: {}".format(person_id)
+	cv2.putText(frame, text, (x1, y1-5), cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, (0, 0, 255), 1)
 		
 
 	cv2.putText(frame, "Enters: " + str(enter_count), (0, 150), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
 	cv2.putText(frame, "Exits: " + str(exit_count), (0, 180), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
 	cv2.putText(frame, "# inside " + str(enter_count - exit_count), (0, 210), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
 	
-	return enter_count, exit_count, histograms
+	return enter_count, exit_count, reid
 
 def main():
 	ttl_cntr = 0
@@ -216,6 +209,8 @@ def main():
 	VIDEO_PATH = guiv1.give_source()
 
 	tracker = CentroidTracker(maxDisappeared=80, maxDistance=90)
+	reid = PersonReID()
+	
 	cap = cv2.VideoCapture(VIDEO_PATH)
 	if VIDEO_PATH != 0:
 		outputFile = VIDEO_PATH[:-4]+'_out.avi'
@@ -258,8 +253,8 @@ def main():
     # Remove the bounding boxes with low confidence
 		used_boxes = postprocess(frame, outs, confThreshold, nmsThreshold)
 		
-		enter_count, exit_count, histograms = tracklines(frame, used_boxes, object_id_list, centroid_dict, enter_count, door, exit_count, counted_object_id, 
-outed_object_id, tracker, histograms)
+		enter_count, exit_count, reid = tracklines(frame, used_boxes, object_id_list, centroid_dict, enter_count, door, exit_count, counted_object_id, 
+outed_object_id, tracker, reid)
 		
 		while door is None:
 			door = selectEntrance(frame)
