@@ -127,7 +127,9 @@ outed_object_id, tracker, reid):
 		
 		cropped_img = frame[y1:y2, x1:x2]
 		cv2.imshow("a", cropped_img)
-		person_id = reid.find_matching_id(cropped_img)	
+		person_id = reid.find_matching_id(cropped_img)
+		
+			
 		if person_id is None:
 			person_id = f" {objectId + 1}"
 			reid.update(person_id, frame)
@@ -160,15 +162,15 @@ outed_object_id, tracker, reid):
 			for pt in range(len(centroid_dict[objectId])):
 				if not pt + 1 == l:
 					if enx1 < start_pt[0] and start_pt[0] < midenx:
-						if mideny > start_pt[1] and mideny <= end_pt[1] and objectId not in outed_object_id:
+						if mideny > start_pt[1] and mideny <= end_pt[1] and person_id not in counted_object_id:
 							print("çık")
-							exit_count += 1
-							outed_object_id.append(objectId)
-                            
-						if mideny < start_pt[1] and mideny >= end_pt[1] and objectId not in counted_object_id:
-							print("gir")
 							enter_count += 1
-							counted_object_id.append(objectId)
+							counted_object_id.append(person_id)
+                            
+						if mideny < start_pt[1] and mideny >= end_pt[1] and person_id not in outed_object_id:
+							print("gir")
+							exit_count += 1
+							outed_object_id.append(person_id)
 							print(objectId)
 					else:
 						continue
